@@ -1,0 +1,361 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="claude:viewport-fit-sides" content="cover">
+<title>Still Water</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Literata:ital,opsz,wght@1,7..72,300;1,7..72,400&display=swap">
+<style>
+/* Layout: a lake at dusk fills the screen; the player sits low on the left like a caption on the water. */
+:root {
+  --bg: #e6ecee;
+  --fg: #1c2a30;
+  --muted: #5d6f77;
+  --accent: #2c6a72;
+  --on-accent: #f3f7f7;
+  --water: #7d9aa3;
+  --glow: #c98a3e;
+  --track: #c7d3d7;
+  --font-display: "Literata", "Iowan Old Style", Georgia, serif;
+  --font-body: "Figtree", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0e171b; --fg: #dde6e5; --muted: #8a9ca0; --accent: #9ccac3;
+    --on-accent: #0e171b; --water: #4f6f77; --glow: #e0a861; --track: #2a3a40;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0e171b; --fg: #dde6e5; --muted: #8a9ca0; --accent: #9ccac3;
+  --on-accent: #0e171b; --water: #4f6f77; --glow: #e0a861; --track: #2a3a40;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font: 400 15px/1.5 var(--font-body);
+  overflow: hidden;
+}
+canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+
+.player {
+  position: relative;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 24px;
+  padding-block: 28px 32px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  max-width: 760px;
+}
+@media (min-width: 700px) { .player { padding-left: max(56px, env(safe-area-inset-left, 0px)); padding-block: 40px 48px; } }
+
+header { display: flex; flex-direction: column; gap: 2px; }
+.name { font: 500 13px/1.2 var(--font-body); letter-spacing: 0.14em; text-transform: uppercase; }
+.tagline { color: var(--muted); font-size: 14px; }
+
+.now { display: flex; flex-direction: column; gap: 18px; }
+.chord {
+  font: italic 300 clamp(64px, 16vw, 150px)/1.12 var(--font-display);
+  letter-spacing: -0.02em;
+  margin: 0;
+  min-height: 1em;
+  text-wrap: balance;
+  transition: opacity 1.6s ease;
+}
+.chord.fading { opacity: 0.15; }
+.meta {
+  display: flex; flex-wrap: wrap; gap: 6px 18px;
+  font: 400 13px/1.4 var(--font-mono);
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.meta b { color: var(--fg); font-weight: 500; }
+
+.controls { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 16px; }
+button {
+  font: 500 15px/1 var(--font-body);
+  border-radius: 999px;
+  padding: 13px 22px;
+  cursor: pointer;
+  border: 1px solid var(--accent);
+  background: transparent;
+  color: var(--fg);
+}
+button.primary { background: var(--accent); color: var(--on-accent); min-width: 128px; }
+button:focus-visible, input:focus-visible { outline: 2px solid var(--glow); outline-offset: 3px; }
+button:disabled { opacity: 0.5; cursor: progress; }
+.volume { display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: 13px; }
+input[type="range"] { width: 120px; accent-color: var(--accent); }
+
+.history {
+  list-style: none; margin: 0; padding: 0;
+  display: flex; flex-wrap: wrap; gap: 4px 16px;
+  font: 400 12px/1.5 var(--font-mono);
+  color: var(--muted);
+  min-height: 1.5em;
+}
+.history li:first-child { color: var(--fg); }
+.status { color: var(--glow); font-size: 14px; min-height: 1.4em; margin: 0; }
+.hint { color: var(--muted); font-size: 12px; }
+kbd { font: 500 11px var(--font-mono); border: 1px solid var(--track); border-radius: 4px; padding: 1px 5px; }
+</style>
+</head>
+<body>
+<canvas id="water" aria-hidden="true"></canvas>
+<main class="player">
+  <header>
+    <span class="name">Still Water</span>
+    <span class="tagline">Endless generative music for long, quiet thinking</span>
+  </header>
+
+  <section class="now" aria-live="polite">
+    <p class="chord" id="chord">Press play</p>
+    <div class="meta">
+      <span>key <b id="key">–</b></span>
+      <span>mood <b id="section">–</b></span>
+      <span>66 bpm</span>
+      <span id="clock">0:00</span>
+      <span>piece <b id="seed">–</b></span>
+    </div>
+    <ul class="history" id="history" aria-label="Recent chords"></ul>
+  </section>
+
+  <div class="now">
+    <div class="controls">
+      <button class="primary" id="play" type="button">Play</button>
+      <button id="next" type="button">New piece</button>
+      <label class="volume" for="volume">Volume
+        <input id="volume" type="range" min="0" max="100" value="70">
+      </label>
+    </div>
+    <p class="status" id="status" role="status"></p>
+    <span class="hint"><kbd>Space</kbd> play or pause · <kbd>N</kbd> new piece · same piece number, same music</span>
+  </div>
+</main>
+
+<script>
+(() => {
+  const BPM = 66;
+  const $ = (id) => document.getElementById(id);
+  const ui = {
+    chord: $("chord"), key: $("key"), section: $("section"), clock: $("clock"),
+    seed: $("seed"), history: $("history"), play: $("play"), next: $("next"),
+    volume: $("volume"), status: $("status"),
+  };
+
+  const audio = { ctx: null, node: null, gain: null, analyser: null, module: null };
+  let seed = Number((location.hash.match(/^#(\d{1,9})$/) || [])[1]) || randomSeed();
+  let playing = false;
+  let level = 0;
+  const recent = [];
+
+  function randomSeed() { return 1 + Math.floor(Math.random() * 999999); }
+
+  function showSeed() {
+    ui.seed.textContent = seed;
+    try { history.replaceState(null, "", "#" + seed); } catch {}
+  }
+  showSeed();
+
+  try {
+    const saved = localStorage.getItem("still-water-volume");
+    if (saved !== null) ui.volume.value = saved;
+  } catch {}
+
+  function volumeGain() { const v = ui.volume.value / 100; return v * v; }
+
+  async function setUpAudio() {
+    if (!window.AudioWorkletNode) throw new Error("This browser can't run audio worklets. Try a recent Chrome, Firefox or Safari.");
+    const ctx = new AudioContext({ latencyHint: "playback" });
+    const [module] = await Promise.all([
+      fetch("ambient.wasm").then((response) => {
+        if (!response.ok) throw new Error(`Couldn't load the music engine (HTTP ${response.status}).`);
+        return response.arrayBuffer();
+      }).then((bytes) => WebAssembly.compile(bytes)),
+      ctx.audioWorklet.addModule("worklet.js"),
+    ]);
+    const node = new AudioWorkletNode(ctx, "ambient", { numberOfInputs: 0, outputChannelCount: [2] });
+    const gain = ctx.createGain();
+    gain.gain.value = volumeGain();
+    const analyser = ctx.createAnalyser();
+    analyser.fftSize = 1024;
+    node.connect(gain).connect(analyser).connect(ctx.destination);
+    node.port.onmessage = ({ data }) => onReport(data);
+    Object.assign(audio, { ctx, node, gain, analyser, module });
+  }
+
+  function startPiece() {
+    recent.length = 0;
+    ui.history.replaceChildren();
+    audio.node.port.postMessage({ type: "start", module: audio.module, seed, bpm: BPM });
+    audio.gain.gain.cancelScheduledValues(audio.ctx.currentTime);
+    audio.gain.gain.setTargetAtTime(volumeGain(), audio.ctx.currentTime, 0.05);
+  }
+
+  const decoder = new TextDecoder();
+  function onReport({ elapsed, headlines }) {
+    const minutes = Math.floor(elapsed / 60);
+    const seconds = String(Math.floor(elapsed % 60)).padStart(2, "0");
+    ui.clock.textContent = `${minutes}:${seconds}`;
+    if (!headlines) return;
+    for (const line of decoder.decode(headlines).split("\n")) {
+      const parts = line.split(" · ");
+      const chord = parts.pop();
+      for (const part of parts) {
+        const key = part.match(/key of (.+)$/);
+        if (key) ui.key.textContent = key[1];
+        else ui.section.textContent = part;
+      }
+      showChord(chord, `${minutes}:${seconds}`);
+    }
+  }
+
+  function showChord(chord, time) {
+    ui.chord.classList.add("fading");
+    setTimeout(() => {
+      ui.chord.textContent = chord;
+      ui.chord.classList.remove("fading");
+    }, 700);
+    recent.unshift(`${time} ${chord}`);
+    recent.length = Math.min(recent.length, 6);
+    ui.history.replaceChildren(...recent.map((text) => {
+      const item = document.createElement("li");
+      item.textContent = text;
+      return item;
+    }));
+    ripple();
+  }
+
+  async function togglePlay() {
+    ui.status.textContent = "";
+    try {
+      if (!audio.ctx) {
+        ui.play.disabled = true;
+        ui.play.textContent = "Loading…";
+        await setUpAudio();
+        startPiece();
+      }
+      if (playing) await audio.ctx.suspend();
+      else await audio.ctx.resume();
+      playing = audio.ctx.state === "running";
+    } catch (error) {
+      ui.status.textContent = error.message || String(error);
+      playing = false;
+    } finally {
+      ui.play.disabled = false;
+      ui.play.textContent = playing ? "Pause" : "Play";
+    }
+  }
+
+  function newPiece() {
+    seed = randomSeed();
+    showSeed();
+    ui.key.textContent = ui.section.textContent = "–";
+    if (!audio.ctx) return togglePlay();
+    const now = audio.ctx.currentTime;
+    audio.gain.gain.setTargetAtTime(0, now, 0.25);
+    setTimeout(startPiece, 1200);
+    if (!playing) togglePlay();
+  }
+
+  ui.play.addEventListener("click", togglePlay);
+  ui.next.addEventListener("click", newPiece);
+  ui.volume.addEventListener("input", () => {
+    try { localStorage.setItem("still-water-volume", ui.volume.value); } catch {}
+    if (audio.gain) audio.gain.gain.setTargetAtTime(volumeGain(), audio.ctx.currentTime, 0.05);
+  });
+  document.addEventListener("keydown", (event) => {
+    if (event.target instanceof HTMLInputElement || event.repeat || event.metaKey || event.ctrlKey) return;
+    if (event.code === "Space") { event.preventDefault(); togglePlay(); }
+    else if (event.key === "n" || event.key === "N") newPiece();
+  });
+
+  // The lake: slow wavy lines that swell with the music, and a ripple on each chord.
+  const canvas = $("water");
+  const draw = canvas.getContext("2d");
+  const still = matchMedia("(prefers-reduced-motion: reduce)");
+  const ripples = [];
+  const samples = new Float32Array(1024);
+
+  function ripple() {
+    if (still.matches) return;
+    ripples.push({ x: 0.35 + Math.random() * 0.6, y: 0.62 + Math.random() * 0.3, born: performance.now() });
+  }
+
+  function frame(now) {
+    const ratio = devicePixelRatio || 1;
+    const width = innerWidth, height = innerHeight;
+    if (canvas.width !== Math.round(width * ratio) || canvas.height !== Math.round(height * ratio)) {
+      canvas.width = Math.round(width * ratio);
+      canvas.height = Math.round(height * ratio);
+    }
+    draw.setTransform(ratio, 0, 0, ratio, 0, 0);
+    draw.clearRect(0, 0, width, height);
+
+    if (audio.analyser && playing) {
+      audio.analyser.getFloatTimeDomainData(samples);
+      let sum = 0;
+      for (const s of samples) sum += s * s;
+      level += (Math.sqrt(sum / samples.length) - level) * 0.03;
+    } else {
+      level *= 0.98;
+    }
+
+    const style = getComputedStyle(document.documentElement);
+    const water = style.getPropertyValue("--water").trim();
+    const glow = style.getPropertyValue("--glow").trim();
+    const t = still.matches ? 0 : now / 1000;
+    const horizon = height * 0.5;
+    const lines = 16;
+    draw.strokeStyle = water;
+    for (let i = 0; i < lines; i++) {
+      const depth = i / (lines - 1);
+      const y = horizon + Math.pow(depth, 1.6) * (height - horizon) * 0.98;
+      const amplitude = (1.5 + depth * 5) * (1 + level * 25);
+      draw.globalAlpha = 0.15 + depth * 0.45;
+      draw.lineWidth = 0.6 + depth * 0.9;
+      draw.beginPath();
+      for (let x = 0; x <= width; x += 8) {
+        const wave = Math.sin(x * 0.006 / (0.4 + depth) + t * 0.25 + i * 1.7)
+          + 0.5 * Math.sin(x * 0.017 / (0.4 + depth) - t * 0.4 + i);
+        if (x === 0) draw.moveTo(x, y + wave * amplitude);
+        else draw.lineTo(x, y + wave * amplitude);
+      }
+      draw.stroke();
+    }
+
+    draw.strokeStyle = glow;
+    for (let r = ripples.length - 1; r >= 0; r--) {
+      const age = (now - ripples[r].born) / 1000;
+      if (age > 9) { ripples.splice(r, 1); continue; }
+      for (let ring = 0; ring < 3; ring++) {
+        const radius = Math.max(0, age - ring * 0.9) * 46;
+        if (radius <= 0) continue;
+        draw.globalAlpha = Math.max(0, 0.5 * (1 - age / 9));
+        draw.lineWidth = 1;
+        draw.beginPath();
+        draw.ellipse(ripples[r].x * width, ripples[r].y * height, radius, radius * 0.22, 0, 0, Math.PI * 2);
+        draw.stroke();
+      }
+    }
+    draw.globalAlpha = 1;
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
