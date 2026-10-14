@@ -10,7 +10,7 @@ class AmbientProcessor extends AudioWorkletProcessor {
       if (data.type === "start") {
         const instance = await WebAssembly.instantiate(data.module, {});
         this.engine = instance.exports;
-        this.engine.init(data.seed, data.bpm, 1, sampleRate);
+        this.engine.init(data.seed, data.style, data.bpm, 1, sampleRate);
       }
     };
   }
@@ -21,7 +21,10 @@ class AmbientProcessor extends AudioWorkletProcessor {
     if (!engine) return true;
 
     const frames = left.length;
-    const samples = new Float32Array(engine.memory.buffer, engine.render(frames), frames * 2);
+    // Render before touching memory.buffer: rendering may grow the memory,
+    // which detaches any buffer fetched earlier.
+    const address = engine.render(frames);
+    const samples = new Float32Array(engine.memory.buffer, address, frames * 2);
     for (let i = 0; i < frames; i++) {
       left[i] = samples[2 * i];
       if (right) right[i] = samples[2 * i + 1];

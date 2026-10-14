@@ -37,11 +37,25 @@
   color-scheme: dark;
 }
 
+/* Each style tints the scene. Light values first, then the same two dark selectors as above. */
+:root[data-style="lofi"] { --bg: #ebe5ee; --fg: #2a1f2e; --muted: #6d5f72; --accent: #74497a; --on-accent: #f7f2f8; --water: #ae94b4; --glow: #d0805a; --track: #d6cadb; }
+:root[data-style="midnight"] { --bg: #e2e5ef; --fg: #1b2036; --muted: #5d6480; --accent: #3a4683; --on-accent: #f2f4fb; --water: #8c96bc; --glow: #5d74c4; --track: #c9cee2; }
+:root[data-style="lab"] { --bg: #eaedef; --fg: #1a2229; --muted: #5b6873; --accent: #1d6bb3; --on-accent: #f3f7fb; --water: #9db0c1; --glow: #e07a22; --track: #cbd4dc; }
+@media (prefers-color-scheme: dark) {
+  :root[data-style="lofi"]:not([data-theme="light"]) { --bg: #19131e; --fg: #ece2ee; --muted: #a090a6; --accent: #d6afdc; --on-accent: #19131e; --water: #5d4867; --glow: #e89e78; --track: #3a2e40; }
+  :root[data-style="midnight"]:not([data-theme="light"]) { --bg: #0a0d19; --fg: #dfe3f4; --muted: #8c93b3; --accent: #a9b5e8; --on-accent: #0a0d19; --water: #37406a; --glow: #cdd6ff; --track: #262c48; }
+  :root[data-style="lab"]:not([data-theme="light"]) { --bg: #0f1215; --fg: #e1e8ee; --muted: #8b98a3; --accent: #6db2ef; --on-accent: #0f1215; --water: #3b4a57; --glow: #f29a45; --track: #2a343d; }
+}
+:root[data-theme="dark"][data-style="lofi"] { --bg: #19131e; --fg: #ece2ee; --muted: #a090a6; --accent: #d6afdc; --on-accent: #19131e; --water: #5d4867; --glow: #e89e78; --track: #3a2e40; }
+:root[data-theme="dark"][data-style="midnight"] { --bg: #0a0d19; --fg: #dfe3f4; --muted: #8c93b3; --accent: #a9b5e8; --on-accent: #0a0d19; --water: #37406a; --glow: #cdd6ff; --track: #262c48; }
+:root[data-theme="dark"][data-style="lab"] { --bg: #0f1215; --fg: #e1e8ee; --muted: #8b98a3; --accent: #6db2ef; --on-accent: #0f1215; --water: #3b4a57; --glow: #f29a45; --track: #2a343d; }
+
 * { box-sizing: border-box; }
 html, body { height: 100%; }
 body {
   margin: 0;
   background: var(--bg);
+  transition: background-color 1.2s ease;
   color: var(--fg);
   font: 400 15px/1.5 var(--font-body);
   overflow: hidden;
@@ -62,7 +76,11 @@ canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
 }
 @media (min-width: 700px) { .player { padding-left: max(56px, env(safe-area-inset-left, 0px)); padding-block: 40px 48px; } }
 
-header { display: flex; flex-direction: column; gap: 2px; }
+header { display: flex; flex-direction: column; gap: 14px; }
+.title { display: flex; flex-direction: column; gap: 2px; }
+.styles { display: flex; flex-wrap: wrap; gap: 8px; }
+.styles button { padding: 8px 16px; font-size: 14px; border-color: var(--track); color: var(--muted); }
+.styles button[aria-pressed="true"] { border-color: var(--accent); color: var(--fg); background: color-mix(in srgb, var(--accent) 14%, transparent); }
 .name { font: 500 13px/1.2 var(--font-body); letter-spacing: 0.14em; text-transform: uppercase; }
 .tagline { color: var(--muted); font-size: 14px; }
 
@@ -117,8 +135,16 @@ kbd { font: 500 11px var(--font-mono); border: 1px solid var(--track); border-ra
 <canvas id="water" aria-hidden="true"></canvas>
 <main class="player">
   <header>
-    <span class="name">Still Water</span>
-    <span class="tagline">Endless generative music for long, quiet thinking</span>
+    <div class="title">
+      <span class="name">Still Water</span>
+      <span class="tagline" id="tagline">Endless generative music for long, quiet thinking</span>
+    </div>
+    <div class="styles" id="styles" role="group" aria-label="Style">
+      <button type="button" data-style="meadow">Meadow</button>
+      <button type="button" data-style="lofi">Lo-fi</button>
+      <button type="button" data-style="midnight">Midnight</button>
+      <button type="button" data-style="lab">Lab</button>
+    </div>
   </header>
 
   <section class="now" aria-live="polite">
@@ -126,7 +152,7 @@ kbd { font: 500 11px var(--font-mono); border: 1px solid var(--track); border-ra
     <div class="meta">
       <span>key <b id="key">–</b></span>
       <span>mood <b id="section">–</b></span>
-      <span>66 bpm</span>
+      <span><b id="bpm">66</b> bpm</span>
       <span id="clock">0:00</span>
       <span>piece <b id="seed">–</b></span>
     </div>
@@ -142,22 +168,35 @@ kbd { font: 500 11px var(--font-mono); border: 1px solid var(--track); border-ra
       </label>
     </div>
     <p class="status" id="status" role="status"></p>
-    <span class="hint"><kbd>Space</kbd> play or pause · <kbd>N</kbd> new piece · same piece number, same music</span>
+    <span class="hint"><kbd>Space</kbd> play or pause · <kbd>N</kbd> new piece · <kbd>1</kbd>–<kbd>4</kbd> style · same piece number, same music</span>
   </div>
 </main>
 
 <script>
 (() => {
-  const BPM = 66;
+  // Same order as Style::ALL in the engine.
+  const STYLES = [
+    { id: "meadow", bpm: 66, tagline: "Lush major chords, a sparse piano and celesta, wide open air" },
+    { id: "lofi", bpm: 78, tagline: "Dusty Rhodes loops, soft swung drums and vinyl crackle" },
+    { id: "midnight", bpm: 56, tagline: "Minor-key piano over deep pads, with rain on the window" },
+    { id: "lab", bpm: 96, tagline: "Pulsing synth sequences in an empty test chamber" },
+  ];
   const $ = (id) => document.getElementById(id);
   const ui = {
     chord: $("chord"), key: $("key"), section: $("section"), clock: $("clock"),
     seed: $("seed"), history: $("history"), play: $("play"), next: $("next"),
-    volume: $("volume"), status: $("status"),
+    volume: $("volume"), status: $("status"), tagline: $("tagline"), bpm: $("bpm"),
+    styles: [...document.querySelectorAll("#styles button")],
   };
 
   const audio = { ctx: null, node: null, gain: null, analyser: null, module: null };
-  let seed = Number((location.hash.match(/^#(\d{1,9})$/) || [])[1]) || randomSeed();
+  // Links look like #lofi-4242; a bare #4242 means Meadow.
+  const link = location.hash.match(/^#(?:([a-z]+)-)?(\d{1,9})$/) || [];
+  let seed = Number(link[2]) || randomSeed();
+  let style = Math.max(0, STYLES.findIndex((entry) => entry.id === link[1]));
+  if (!link[2]) {
+    try { style = Math.max(0, STYLES.findIndex((entry) => entry.id === localStorage.getItem("still-water-style"))); } catch {}
+  }
   let playing = false;
   let level = 0;
   const recent = [];
@@ -166,9 +205,19 @@ kbd { font: 500 11px var(--font-mono); border: 1px solid var(--track); border-ra
 
   function showSeed() {
     ui.seed.textContent = seed;
-    try { history.replaceState(null, "", "#" + seed); } catch {}
+    try { history.replaceState(null, "", `#${STYLES[style].id}-${seed}`); } catch {}
   }
-  showSeed();
+
+  function showStyle() {
+    const entry = STYLES[style];
+    document.documentElement.dataset.style = entry.id;
+    ui.tagline.textContent = entry.tagline;
+    ui.bpm.textContent = entry.bpm;
+    for (const button of ui.styles) button.setAttribute("aria-pressed", String(button.dataset.style === entry.id));
+    try { localStorage.setItem("still-water-style", entry.id); } catch {}
+    showSeed();
+  }
+  showStyle();
 
   try {
     const saved = localStorage.getItem("still-water-volume");
@@ -200,7 +249,7 @@ kbd { font: 500 11px var(--font-mono); border: 1px solid var(--track); border-ra
   function startPiece() {
     recent.length = 0;
     ui.history.replaceChildren();
-    audio.node.port.postMessage({ type: "start", module: audio.module, seed, bpm: BPM });
+    audio.node.port.postMessage({ type: "start", module: audio.module, seed, style, bpm: 0 });
     audio.gain.gain.cancelScheduledValues(audio.ctx.currentTime);
     audio.gain.gain.setTargetAtTime(volumeGain(), audio.ctx.currentTime, 0.05);
   }
@@ -260,19 +309,33 @@ kbd { font: 500 11px var(--font-mono); border: 1px solid var(--track); border-ra
     }
   }
 
+  // Fade the current piece out, then start whatever seed and style are set.
+  let restart = null;
+  function restartPiece() {
+    ui.key.textContent = ui.section.textContent = "–";
+    if (!audio.ctx) return togglePlay();
+    audio.gain.gain.setTargetAtTime(0, audio.ctx.currentTime, 0.25);
+    clearTimeout(restart);
+    restart = setTimeout(startPiece, 1200);
+    if (!playing) togglePlay();
+  }
+
   function newPiece() {
     seed = randomSeed();
     showSeed();
-    ui.key.textContent = ui.section.textContent = "–";
-    if (!audio.ctx) return togglePlay();
-    const now = audio.ctx.currentTime;
-    audio.gain.gain.setTargetAtTime(0, now, 0.25);
-    setTimeout(startPiece, 1200);
-    if (!playing) togglePlay();
+    restartPiece();
+  }
+
+  function chooseStyle(index) {
+    if (index === style && audio.ctx) return;
+    style = index;
+    showStyle();
+    restartPiece();
   }
 
   ui.play.addEventListener("click", togglePlay);
   ui.next.addEventListener("click", newPiece);
+  ui.styles.forEach((button, index) => button.addEventListener("click", () => chooseStyle(index)));
   ui.volume.addEventListener("input", () => {
     try { localStorage.setItem("still-water-volume", ui.volume.value); } catch {}
     if (audio.gain) audio.gain.gain.setTargetAtTime(volumeGain(), audio.ctx.currentTime, 0.05);
@@ -281,6 +344,7 @@ kbd { font: 500 11px var(--font-mono); border: 1px solid var(--track); border-ra
     if (event.target instanceof HTMLInputElement || event.repeat || event.metaKey || event.ctrlKey) return;
     if (event.code === "Space") { event.preventDefault(); togglePlay(); }
     else if (event.key === "n" || event.key === "N") newPiece();
+    else if (/^[1-4]$/.test(event.key)) chooseStyle(Number(event.key) - 1);
   });
 
   // The lake: slow wavy lines that swell with the music, and a ripple on each chord.
@@ -289,6 +353,8 @@ kbd { font: 500 11px var(--font-mono); border: 1px solid var(--track); border-ra
   const still = matchMedia("(prefers-reduced-motion: reduce)");
   const ripples = [];
   const samples = new Float32Array(1024);
+  const drops = Array.from({ length: 70 }, () => ({ x: Math.random(), y: Math.random(), speed: 0.35 + Math.random() * 0.4 }));
+  let lastFrame = 0;
 
   function ripple() {
     if (still.matches) return;
@@ -314,9 +380,9 @@ kbd { font: 500 11px var(--font-mono); border: 1px solid var(--track); border-ra
       level *= 0.98;
     }
 
-    const style = getComputedStyle(document.documentElement);
-    const water = style.getPropertyValue("--water").trim();
-    const glow = style.getPropertyValue("--glow").trim();
+    const css = getComputedStyle(document.documentElement);
+    const water = css.getPropertyValue("--water").trim();
+    const glow = css.getPropertyValue("--glow").trim();
     const t = still.matches ? 0 : now / 1000;
     const horizon = height * 0.5;
     const lines = 16;
@@ -333,6 +399,23 @@ kbd { font: 500 11px var(--font-mono); border: 1px solid var(--track); border-ra
           + 0.5 * Math.sin(x * 0.017 / (0.4 + depth) - t * 0.4 + i);
         if (x === 0) draw.moveTo(x, y + wave * amplitude);
         else draw.lineTo(x, y + wave * amplitude);
+      }
+      draw.stroke();
+    }
+
+    const elapsed = Math.min(0.1, (now - lastFrame) / 1000);
+    lastFrame = now;
+    if (STYLES[style].id === "midnight" && !still.matches) {
+      draw.strokeStyle = water;
+      draw.lineWidth = 1;
+      draw.globalAlpha = 0.35;
+      draw.beginPath();
+      for (const drop of drops) {
+        drop.y += drop.speed * elapsed;
+        if (drop.y > 1) { drop.y -= 1.05; drop.x = Math.random(); }
+        const x = drop.x * width - drop.y * 40, y = drop.y * height;
+        draw.moveTo(x, y);
+        draw.lineTo(x - 3, y + 14);
       }
       draw.stroke();
     }
