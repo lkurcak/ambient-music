@@ -41,14 +41,20 @@
 :root[data-style="lofi"] { --bg: #ebe5ee; --fg: #2a1f2e; --muted: #6d5f72; --accent: #74497a; --on-accent: #f7f2f8; --water: #ae94b4; --glow: #d0805a; --track: #d6cadb; }
 :root[data-style="midnight"] { --bg: #e2e5ef; --fg: #1b2036; --muted: #5d6480; --accent: #3a4683; --on-accent: #f2f4fb; --water: #8c96bc; --glow: #5d74c4; --track: #c9cee2; }
 :root[data-style="lab"] { --bg: #eaedef; --fg: #1a2229; --muted: #5b6873; --accent: #1d6bb3; --on-accent: #f3f7fb; --water: #9db0c1; --glow: #e07a22; --track: #cbd4dc; }
+:root[data-style="scarlet"] { --bg: #f0e4e4; --fg: #2e1418; --muted: #74545a; --accent: #9c2638; --on-accent: #fbf2f3; --water: #c29aa0; --glow: #b8892e; --track: #e0cbcd; }
+:root[data-style="void"] { --bg: #e8e8e6; --fg: #1d1d1d; --muted: #5f5f5c; --accent: #3d3d3a; --on-accent: #f5f5f3; --water: #a3a39f; --glow: #6a6a66; --track: #d0d0cc; }
 @media (prefers-color-scheme: dark) {
   :root[data-style="lofi"]:not([data-theme="light"]) { --bg: #19131e; --fg: #ece2ee; --muted: #a090a6; --accent: #d6afdc; --on-accent: #19131e; --water: #5d4867; --glow: #e89e78; --track: #3a2e40; }
   :root[data-style="midnight"]:not([data-theme="light"]) { --bg: #0a0d19; --fg: #dfe3f4; --muted: #8c93b3; --accent: #a9b5e8; --on-accent: #0a0d19; --water: #37406a; --glow: #cdd6ff; --track: #262c48; }
   :root[data-style="lab"]:not([data-theme="light"]) { --bg: #0f1215; --fg: #e1e8ee; --muted: #8b98a3; --accent: #6db2ef; --on-accent: #0f1215; --water: #3b4a57; --glow: #f29a45; --track: #2a343d; }
+  :root[data-style="scarlet"]:not([data-theme="light"]) { --bg: #160a0d; --fg: #f1e2e4; --muted: #a8868b; --accent: #e88593; --on-accent: #160a0d; --water: #5e2a33; --glow: #e3b55c; --track: #3a1d23; }
+  :root[data-style="void"]:not([data-theme="light"]) { --bg: #08080a; --fg: #e4e4e6; --muted: #8a8a90; --accent: #d8d8de; --on-accent: #08080a; --water: #34343a; --glow: #f2f2f6; --track: #222226; }
 }
 :root[data-theme="dark"][data-style="lofi"] { --bg: #19131e; --fg: #ece2ee; --muted: #a090a6; --accent: #d6afdc; --on-accent: #19131e; --water: #5d4867; --glow: #e89e78; --track: #3a2e40; }
 :root[data-theme="dark"][data-style="midnight"] { --bg: #0a0d19; --fg: #dfe3f4; --muted: #8c93b3; --accent: #a9b5e8; --on-accent: #0a0d19; --water: #37406a; --glow: #cdd6ff; --track: #262c48; }
 :root[data-theme="dark"][data-style="lab"] { --bg: #0f1215; --fg: #e1e8ee; --muted: #8b98a3; --accent: #6db2ef; --on-accent: #0f1215; --water: #3b4a57; --glow: #f29a45; --track: #2a343d; }
+:root[data-theme="dark"][data-style="scarlet"] { --bg: #160a0d; --fg: #f1e2e4; --muted: #a8868b; --accent: #e88593; --on-accent: #160a0d; --water: #5e2a33; --glow: #e3b55c; --track: #3a1d23; }
+:root[data-theme="dark"][data-style="void"] { --bg: #08080a; --fg: #e4e4e6; --muted: #8a8a90; --accent: #d8d8de; --on-accent: #08080a; --water: #34343a; --glow: #f2f2f6; --track: #222226; }
 
 * { box-sizing: border-box; }
 html, body { height: 100%; }
@@ -144,6 +150,8 @@ kbd { font: 500 11px var(--font-mono); border: 1px solid var(--track); border-ra
       <button type="button" data-style="lofi">Lo-fi</button>
       <button type="button" data-style="midnight">Midnight</button>
       <button type="button" data-style="lab">Lab</button>
+      <button type="button" data-style="scarlet">Scarlet</button>
+      <button type="button" data-style="void">Void</button>
     </div>
   </header>
 
@@ -152,6 +160,7 @@ kbd { font: 500 11px var(--font-mono); border: 1px solid var(--track); border-ra
     <div class="meta">
       <span>key <b id="key">–</b></span>
       <span>mood <b id="section">–</b></span>
+      <span>with <b id="voices">–</b></span>
       <span><b id="bpm">66</b> bpm</span>
       <span id="clock">0:00</span>
       <span>piece <b id="seed">–</b></span>
@@ -168,7 +177,7 @@ kbd { font: 500 11px var(--font-mono); border: 1px solid var(--track); border-ra
       </label>
     </div>
     <p class="status" id="status" role="status"></p>
-    <span class="hint"><kbd>Space</kbd> play or pause · <kbd>N</kbd> new piece · <kbd>1</kbd>–<kbd>4</kbd> style · same piece number, same music</span>
+    <span class="hint"><kbd>Space</kbd> play or pause · <kbd>N</kbd> new piece · <kbd>1</kbd>–<kbd>6</kbd> style · same piece number, same music</span>
   </div>
 </main>
 
@@ -180,10 +189,12 @@ kbd { font: 500 11px var(--font-mono); border: 1px solid var(--track); border-ra
     { id: "lofi", bpm: 78, tagline: "Dusty Rhodes loops, soft swung drums and vinyl crackle" },
     { id: "midnight", bpm: 56, tagline: "Minor-key piano over deep pads, with rain on the window" },
     { id: "lab", bpm: 96, tagline: "Pulsing synth sequences in an empty test chamber" },
+    { id: "scarlet", bpm: 84, tagline: "Touhou at half speed: harmonic-minor piano and long themes that keep coming back" },
+    { id: "void", bpm: 70, tagline: "Sparse chip melodies over drones, through a crushed old converter" },
   ];
   const $ = (id) => document.getElementById(id);
   const ui = {
-    chord: $("chord"), key: $("key"), section: $("section"), clock: $("clock"),
+    chord: $("chord"), key: $("key"), section: $("section"), voices: $("voices"), clock: $("clock"),
     seed: $("seed"), history: $("history"), play: $("play"), next: $("next"),
     volume: $("volume"), status: $("status"), tagline: $("tagline"), bpm: $("bpm"),
     styles: [...document.querySelectorAll("#styles button")],
@@ -263,22 +274,26 @@ kbd { font: 500 11px var(--font-mono); border: 1px solid var(--track); border-ra
     for (const line of decoder.decode(headlines).split("\n")) {
       const parts = line.split(" · ");
       const chord = parts.pop();
+      // Themes coming back and solo moments are worth a note in the history.
+      let moment = "";
       for (const part of parts) {
         const key = part.match(/key of (.+)$/);
         if (key) ui.key.textContent = key[1];
+        else if (part.startsWith("with ")) ui.voices.textContent = part.slice(5);
+        else if (/^theme |alone$|^a breath$/.test(part)) moment = part;
         else ui.section.textContent = part;
       }
-      showChord(chord, `${minutes}:${seconds}`);
+      showChord(chord, `${minutes}:${seconds}`, moment);
     }
   }
 
-  function showChord(chord, time) {
+  function showChord(chord, time, moment) {
     ui.chord.classList.add("fading");
     setTimeout(() => {
       ui.chord.textContent = chord;
       ui.chord.classList.remove("fading");
     }, 700);
-    recent.unshift(`${time} ${chord}`);
+    recent.unshift(moment ? `${time} ${chord} · ${moment}` : `${time} ${chord}`);
     recent.length = Math.min(recent.length, 6);
     ui.history.replaceChildren(...recent.map((text) => {
       const item = document.createElement("li");
@@ -312,7 +327,7 @@ kbd { font: 500 11px var(--font-mono); border: 1px solid var(--track); border-ra
   // Fade the current piece out, then start whatever seed and style are set.
   let restart = null;
   function restartPiece() {
-    ui.key.textContent = ui.section.textContent = "–";
+    ui.key.textContent = ui.section.textContent = ui.voices.textContent = "–";
     if (!audio.ctx) return togglePlay();
     audio.gain.gain.setTargetAtTime(0, audio.ctx.currentTime, 0.25);
     clearTimeout(restart);
@@ -344,7 +359,7 @@ kbd { font: 500 11px var(--font-mono); border: 1px solid var(--track); border-ra
     if (event.target instanceof HTMLInputElement || event.repeat || event.metaKey || event.ctrlKey) return;
     if (event.code === "Space") { event.preventDefault(); togglePlay(); }
     else if (event.key === "n" || event.key === "N") newPiece();
-    else if (/^[1-4]$/.test(event.key)) chooseStyle(Number(event.key) - 1);
+    else if (/^[1-6]$/.test(event.key)) chooseStyle(Number(event.key) - 1);
   });
 
   // The lake: slow wavy lines that swell with the music, and a ripple on each chord.
