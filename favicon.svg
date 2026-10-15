@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- A low sun over still water: the player's dusk lake, in its own colours. -->
+  <rect width="64" height="64" rx="14" fill="#0e171b"/>
+  <path d="M19 34a13 13 0 0 1 26 0z" fill="#e0a861"/>
+  <g fill="none" stroke-linecap="round">
+    <path d="M17 40h30" stroke="#e0a861" stroke-width="4"/>
+    <path d="M22 47h20" stroke="#9ccac3" stroke-width="3.5" opacity=".85"/>
+    <path d="M27 53.5h10" stroke="#9ccac3" stroke-width="3" opacity=".6"/>
+  </g>
+</svg>
