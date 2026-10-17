@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="claude:viewport-fit-sides" content="cover">
 <title>Still Water</title>
+<meta name="description" content="Endless generative music for long, quiet thinking: six styles of ambient, lo-fi and game-inspired music, made fresh in your browser, with an 8-bit switch.">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -85,9 +86,13 @@ canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
 
 header { display: flex; flex-direction: column; gap: 14px; }
 .title { display: flex; flex-direction: column; gap: 2px; }
+.choices { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
 .styles { display: flex; flex-wrap: wrap; gap: 8px; }
 .styles button { padding: 8px 16px; font-size: 14px; border-color: var(--track); color: var(--muted); }
 .styles button[aria-pressed="true"] { border-color: var(--accent); color: var(--fg); background: color-mix(in srgb, var(--accent) 14%, transparent); }
+/* A modifier on top of any style: square and dashed, like a cartridge switch. */
+.modifier { padding: 8px 14px; font: 500 13px/1 var(--font-mono); border-radius: 3px; border: 1px dashed var(--track); color: var(--muted); }
+.modifier[aria-pressed="true"] { border-style: solid; border-color: var(--accent); color: var(--fg); background: color-mix(in srgb, var(--accent) 14%, transparent); }
 .name { font: 500 13px/1.2 var(--font-body); letter-spacing: 0.14em; text-transform: uppercase; }
 .tagline { color: var(--muted); font-size: 14px; }
 
@@ -146,13 +151,16 @@ kbd { font: 500 11px var(--font-mono); border: 1px solid var(--track); border-ra
       <span class="name">Still Water</span>
       <span class="tagline" id="tagline">Endless generative music for long, quiet thinking</span>
     </div>
-    <div class="styles" id="styles" role="group" aria-label="Style">
-      <button type="button" data-style="meadow">Meadow</button>
-      <button type="button" data-style="lofi">Lo-fi</button>
-      <button type="button" data-style="midnight">Midnight</button>
-      <button type="button" data-style="lab">Lab</button>
-      <button type="button" data-style="scarlet">Scarlet</button>
-      <button type="button" data-style="void">Void</button>
+    <div class="choices">
+      <div class="styles" id="styles" role="group" aria-label="Style">
+        <button type="button" data-style="meadow">Meadow</button>
+        <button type="button" data-style="lofi">Lo-fi</button>
+        <button type="button" data-style="midnight">Midnight</button>
+        <button type="button" data-style="lab">Lab</button>
+        <button type="button" data-style="scarlet">Scarlet</button>
+        <button type="button" data-style="void">Void</button>
+      </div>
+      <button type="button" class="modifier" id="chip" aria-pressed="false" title="Play it on console voices: same tune, 8-bit sound">8-bit</button>
     </div>
   </header>
 
@@ -178,7 +186,7 @@ kbd { font: 500 11px var(--font-mono); border: 1px solid var(--track); border-ra
       </label>
     </div>
     <p class="status" id="status" role="status"></p>
-    <span class="hint"><kbd>Space</kbd> play or pause · <kbd>N</kbd> new piece · <kbd>1</kbd>–<kbd>6</kbd> style · same piece number, same music</span>
+    <span class="hint"><kbd>Space</kbd> play or pause · <kbd>N</kbd> new piece · <kbd>1</kbd>–<kbd>6</kbd> style · <kbd>C</kbd> 8-bit · same piece number, same music</span>
   </div>
 </main>
 
@@ -198,16 +206,20 @@ kbd { font: 500 11px var(--font-mono); border: 1px solid var(--track); border-ra
     chord: $("chord"), key: $("key"), section: $("section"), voices: $("voices"), clock: $("clock"),
     seed: $("seed"), history: $("history"), play: $("play"), next: $("next"),
     volume: $("volume"), status: $("status"), tagline: $("tagline"), bpm: $("bpm"),
-    styles: [...document.querySelectorAll("#styles button")],
+    styles: [...document.querySelectorAll("#styles button")], chip: $("chip"),
   };
 
+  // Bump when ambient.wasm or worklet.js change, so browsers never pair a cached old one with a new one.
+  const VERSION = "4";
   const audio = { ctx: null, node: null, gain: null, analyser: null, module: null };
-  // Links look like #lofi-4242; a bare #4242 means Meadow.
-  const link = location.hash.match(/^#(?:([a-z]+)-)?(\d{1,9})$/) || [];
-  let seed = Number(link[2]) || randomSeed();
+  // Links look like #lofi-4242, or #void+chip-4242 on console voices; a bare #4242 means Meadow.
+  const link = location.hash.match(/^#(?:([a-z]+)(\+chip)?-)?(\d{1,9})$/) || [];
+  let seed = Number(link[3]) || randomSeed();
   let style = Math.max(0, STYLES.findIndex((entry) => entry.id === link[1]));
-  if (!link[2]) {
+  let chip = Boolean(link[2]);
+  if (!link[3]) {
     try { style = Math.max(0, STYLES.findIndex((entry) => entry.id === localStorage.getItem("still-water-style"))); } catch {}
+    try { chip = localStorage.getItem("still-water-chip") === "1"; } catch {}
   }
   let playing = false;
   let level = 0;
@@ -217,7 +229,7 @@ kbd { font: 500 11px var(--font-mono); border: 1px solid var(--track); border-ra
 
   function showSeed() {
     ui.seed.textContent = seed;
-    try { history.replaceState(null, "", `#${STYLES[style].id}-${seed}`); } catch {}
+    try { history.replaceState(null, "", `#${STYLES[style].id}${chip ? "+chip" : ""}-${seed}`); } catch {}
   }
 
   function showStyle() {
@@ -226,7 +238,9 @@ kbd { font: 500 11px var(--font-mono); border: 1px solid var(--track); border-ra
     ui.tagline.textContent = entry.tagline;
     ui.bpm.textContent = entry.bpm;
     for (const button of ui.styles) button.setAttribute("aria-pressed", String(button.dataset.style === entry.id));
+    ui.chip.setAttribute("aria-pressed", String(chip));
     try { localStorage.setItem("still-water-style", entry.id); } catch {}
+    try { localStorage.setItem("still-water-chip", chip ? "1" : "0"); } catch {}
     showSeed();
   }
   showStyle();
@@ -242,11 +256,11 @@ kbd { font: 500 11px var(--font-mono); border: 1px solid var(--track); border-ra
     if (!window.AudioWorkletNode) throw new Error("This browser can't run audio worklets. Try a recent Chrome, Firefox or Safari.");
     const ctx = new AudioContext({ latencyHint: "playback" });
     const [module] = await Promise.all([
-      fetch("ambient.wasm").then((response) => {
+      fetch(`ambient.wasm?v=${VERSION}`).then((response) => {
         if (!response.ok) throw new Error(`Couldn't load the music engine (HTTP ${response.status}).`);
         return response.arrayBuffer();
       }).then((bytes) => WebAssembly.compile(bytes)),
-      ctx.audioWorklet.addModule("worklet.js"),
+      ctx.audioWorklet.addModule(`worklet.js?v=${VERSION}`),
     ]);
     const node = new AudioWorkletNode(ctx, "ambient", { numberOfInputs: 0, outputChannelCount: [2] });
     const gain = ctx.createGain();
@@ -261,7 +275,7 @@ kbd { font: 500 11px var(--font-mono); border: 1px solid var(--track); border-ra
   function startPiece() {
     recent.length = 0;
     ui.history.replaceChildren();
-    audio.node.port.postMessage({ type: "start", module: audio.module, seed, style, bpm: 0 });
+    audio.node.port.postMessage({ type: "start", module: audio.module, seed, style, modifiers: chip ? 1 : 0, bpm: 0 });
     audio.gain.gain.cancelScheduledValues(audio.ctx.currentTime);
     audio.gain.gain.setTargetAtTime(volumeGain(), audio.ctx.currentTime, 0.05);
   }
@@ -349,7 +363,15 @@ kbd { font: 500 11px var(--font-mono); border: 1px solid var(--track); border-ra
     restartPiece();
   }
 
+  // Same piece, same tune: only the instruments change.
+  function toggleChip() {
+    chip = !chip;
+    showStyle();
+    restartPiece();
+  }
+
   ui.play.addEventListener("click", togglePlay);
+  ui.chip.addEventListener("click", toggleChip);
   ui.next.addEventListener("click", newPiece);
   ui.styles.forEach((button, index) => button.addEventListener("click", () => chooseStyle(index)));
   ui.volume.addEventListener("input", () => {
@@ -360,6 +382,7 @@ kbd { font: 500 11px var(--font-mono); border: 1px solid var(--track); border-ra
     if (event.target instanceof HTMLInputElement || event.repeat || event.metaKey || event.ctrlKey) return;
     if (event.code === "Space") { event.preventDefault(); togglePlay(); }
     else if (event.key === "n" || event.key === "N") newPiece();
+    else if (event.key === "c" || event.key === "C") toggleChip();
     else if (/^[1-6]$/.test(event.key)) chooseStyle(Number(event.key) - 1);
   });
 
@@ -410,11 +433,16 @@ kbd { font: 500 11px var(--font-mono); border: 1px solid var(--track); border-ra
       draw.globalAlpha = 0.15 + depth * 0.45;
       draw.lineWidth = 0.6 + depth * 0.9;
       draw.beginPath();
+      // On chip the water goes blocky: stairs on a 4px grid instead of curves.
+      let last = 0;
       for (let x = 0; x <= width; x += 8) {
         const wave = Math.sin(x * 0.006 / (0.4 + depth) + t * 0.25 + i * 1.7)
           + 0.5 * Math.sin(x * 0.017 / (0.4 + depth) - t * 0.4 + i);
-        if (x === 0) draw.moveTo(x, y + wave * amplitude);
-        else draw.lineTo(x, y + wave * amplitude);
+        const level = chip ? Math.round((y + wave * amplitude) / 4) * 4 : y + wave * amplitude;
+        if (x === 0) draw.moveTo(x, level);
+        else if (chip) { draw.lineTo(x, last); draw.lineTo(x, level); }
+        else draw.lineTo(x, level);
+        last = level;
       }
       draw.stroke();
     }
