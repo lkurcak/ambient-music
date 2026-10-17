@@ -202,7 +202,8 @@ kbd { font: 500 11px var(--font-mono); border: 1px solid var(--track); border-ra
     { id: "lab", bpm: 96, tagline: "Pulsing synth sequences in an empty test chamber" },
     { id: "scarlet", bpm: 84, tagline: "Touhou at half speed: harmonic-minor piano and long themes that keep coming back",
       drive: { bpm: 150, tagline: "Touhou at full tilt: a chord a bar, drums, galloping bass and the hook again and again" } },
-    { id: "void", bpm: 70, tagline: "Sparse chip melodies over drones, through a crushed old converter" },
+    { id: "void", bpm: 70, tagline: "Sparse chip melodies over drones, through a crushed old converter",
+      drive: { bpm: 160, tagline: "Void at full tilt: chip leads racing over club beats and rolling console bass" } },
   ];
   const $ = (id) => document.getElementById(id);
   const ui = {
@@ -213,7 +214,7 @@ kbd { font: 500 11px var(--font-mono); border: 1px solid var(--track); border-ra
   };
 
   // Bump when ambient.wasm or worklet.js change, so browsers never pair a cached old one with a new one.
-  const VERSION = "5";
+  const VERSION = "6";
   const audio = { ctx: null, node: null, gain: null, analyser: null, module: null };
   // Links look like #lofi-4242, #scarlet:drive-4242 for a variant, or #void+chip-4242 on console voices;
   // a bare #4242 means Meadow.
@@ -248,7 +249,7 @@ kbd { font: 500 11px var(--font-mono); border: 1px solid var(--track); border-ra
     ui.bpm.textContent = sound.bpm;
     ui.drive.disabled = !entry.drive;
     ui.drive.setAttribute("aria-pressed", String(driving()));
-    ui.drive.title = entry.drive ? "Up-tempo: drums, running melodies, the hook again and again" : "Only Scarlet has a drive version so far";
+    ui.drive.title = entry.drive ? "Up-tempo: drums, running melodies, the hook again and again" : "Only Scarlet and Void have a drive version so far";
     for (const button of ui.styles) button.setAttribute("aria-pressed", String(button.dataset.style === entry.id));
     ui.chip.setAttribute("aria-pressed", String(chip));
     try { localStorage.setItem("still-water-style", entry.id); } catch {}
