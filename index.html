@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="claude:viewport-fit-sides" content="cover">
 <title>Still Water</title>
-<meta name="description" content="Endless generative music for long, quiet thinking: six styles of ambient, lo-fi and game-inspired music, made fresh in your browser, with an 8-bit switch.">
+<meta name="description" content="Endless generative music for long, quiet thinking: six styles of ambient, lo-fi and game-inspired music, made fresh in your browser, with a drive mode and an 8-bit switch.">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -92,6 +92,7 @@ header { display: flex; flex-direction: column; gap: 14px; }
 .styles button[aria-pressed="true"] { border-color: var(--accent); color: var(--fg); background: color-mix(in srgb, var(--accent) 14%, transparent); }
 /* A modifier on top of any style: square and dashed, like a cartridge switch. */
 .modifier { padding: 8px 14px; font: 500 13px/1 var(--font-mono); border-radius: 3px; border: 1px dashed var(--track); color: var(--muted); }
+.modifier:disabled { opacity: 0.4; cursor: not-allowed; }
 .modifier[aria-pressed="true"] { border-style: solid; border-color: var(--accent); color: var(--fg); background: color-mix(in srgb, var(--accent) 14%, transparent); }
 .name { font: 500 13px/1.2 var(--font-body); letter-spacing: 0.14em; text-transform: uppercase; }
 .tagline { color: var(--muted); font-size: 14px; }
@@ -160,6 +161,7 @@ kbd { font: 500 11px var(--font-mono); border: 1px solid var(--track); border-ra
         <button type="button" data-style="scarlet">Scarlet</button>
         <button type="button" data-style="void">Void</button>
       </div>
+      <button type="button" class="modifier" id="drive" aria-pressed="false">Drive</button>
       <button type="button" class="modifier" id="chip" aria-pressed="false" title="Play it on console voices: same tune, 8-bit sound">8-bit</button>
     </div>
   </header>
@@ -186,7 +188,7 @@ kbd { font: 500 11px var(--font-mono); border: 1px solid var(--track); border-ra
       </label>
     </div>
     <p class="status" id="status" role="status"></p>
-    <span class="hint"><kbd>Space</kbd> play or pause · <kbd>N</kbd> new piece · <kbd>1</kbd>–<kbd>6</kbd> style · <kbd>C</kbd> 8-bit · same piece number, same music</span>
+    <span class="hint"><kbd>Space</kbd> play or pause · <kbd>N</kbd> new piece · <kbd>1</kbd>–<kbd>6</kbd> style · <kbd>D</kbd> drive · <kbd>C</kbd> 8-bit · same piece number, same music</span>
   </div>
 </main>
 
@@ -198,7 +200,8 @@ kbd { font: 500 11px var(--font-mono); border: 1px solid var(--track); border-ra
     { id: "lofi", bpm: 78, tagline: "Dusty Rhodes loops, soft swung drums and vinyl crackle" },
     { id: "midnight", bpm: 56, tagline: "Minor-key piano over deep pads, with rain on the window" },
     { id: "lab", bpm: 96, tagline: "Pulsing synth sequences in an empty test chamber" },
-    { id: "scarlet", bpm: 84, tagline: "Touhou at half speed: harmonic-minor piano and long themes that keep coming back" },
+    { id: "scarlet", bpm: 84, tagline: "Touhou at half speed: harmonic-minor piano and long themes that keep coming back",
+      drive: { bpm: 150, tagline: "Touhou at full tilt: a chord a bar, drums, galloping bass and the hook again and again" } },
     { id: "void", bpm: 70, tagline: "Sparse chip melodies over drones, through a crushed old converter" },
   ];
   const $ = (id) => document.getElementById(id);
@@ -206,21 +209,26 @@ kbd { font: 500 11px var(--font-mono); border: 1px solid var(--track); border-ra
     chord: $("chord"), key: $("key"), section: $("section"), voices: $("voices"), clock: $("clock"),
     seed: $("seed"), history: $("history"), play: $("play"), next: $("next"),
     volume: $("volume"), status: $("status"), tagline: $("tagline"), bpm: $("bpm"),
-    styles: [...document.querySelectorAll("#styles button")], chip: $("chip"),
+    styles: [...document.querySelectorAll("#styles button")], drive: $("drive"), chip: $("chip"),
   };
 
   // Bump when ambient.wasm or worklet.js change, so browsers never pair a cached old one with a new one.
-  const VERSION = "4";
+  const VERSION = "5";
   const audio = { ctx: null, node: null, gain: null, analyser: null, module: null };
-  // Links look like #lofi-4242, or #void+chip-4242 on console voices; a bare #4242 means Meadow.
-  const link = location.hash.match(/^#(?:([a-z]+)(\+chip)?-)?(\d{1,9})$/) || [];
-  let seed = Number(link[3]) || randomSeed();
+  // Links look like #lofi-4242, #scarlet:drive-4242 for a variant, or #void+chip-4242 on console voices;
+  // a bare #4242 means Meadow.
+  const link = location.hash.match(/^#(?:([a-z]+)(:drive)?(\+chip)?-)?(\d{1,9})$/) || [];
+  let seed = Number(link[4]) || randomSeed();
   let style = Math.max(0, STYLES.findIndex((entry) => entry.id === link[1]));
-  let chip = Boolean(link[2]);
-  if (!link[3]) {
+  // Drive is a wish that holds across styles, heard only where a style has a drive version.
+  let drive = Boolean(link[2]);
+  let chip = Boolean(link[3]);
+  if (!link[4]) {
     try { style = Math.max(0, STYLES.findIndex((entry) => entry.id === localStorage.getItem("still-water-style"))); } catch {}
+    try { drive = localStorage.getItem("still-water-drive") === "1"; } catch {}
     try { chip = localStorage.getItem("still-water-chip") === "1"; } catch {}
   }
+  const driving = () => drive && Boolean(STYLES[style].drive);
   let playing = false;
   let level = 0;
   const recent = [];
@@ -229,17 +237,22 @@ kbd { font: 500 11px var(--font-mono); border: 1px solid var(--track); border-ra
 
   function showSeed() {
     ui.seed.textContent = seed;
-    try { history.replaceState(null, "", `#${STYLES[style].id}${chip ? "+chip" : ""}-${seed}`); } catch {}
+    try { history.replaceState(null, "", `#${STYLES[style].id}${driving() ? ":drive" : ""}${chip ? "+chip" : ""}-${seed}`); } catch {}
   }
 
   function showStyle() {
     const entry = STYLES[style];
     document.documentElement.dataset.style = entry.id;
-    ui.tagline.textContent = entry.tagline;
-    ui.bpm.textContent = entry.bpm;
+    const sound = driving() ? entry.drive : entry;
+    ui.tagline.textContent = sound.tagline;
+    ui.bpm.textContent = sound.bpm;
+    ui.drive.disabled = !entry.drive;
+    ui.drive.setAttribute("aria-pressed", String(driving()));
+    ui.drive.title = entry.drive ? "Up-tempo: drums, running melodies, the hook again and again" : "Only Scarlet has a drive version so far";
     for (const button of ui.styles) button.setAttribute("aria-pressed", String(button.dataset.style === entry.id));
     ui.chip.setAttribute("aria-pressed", String(chip));
     try { localStorage.setItem("still-water-style", entry.id); } catch {}
+    try { localStorage.setItem("still-water-drive", drive ? "1" : "0"); } catch {}
     try { localStorage.setItem("still-water-chip", chip ? "1" : "0"); } catch {}
     showSeed();
   }
@@ -275,7 +288,7 @@ kbd { font: 500 11px var(--font-mono); border: 1px solid var(--track); border-ra
   function startPiece() {
     recent.length = 0;
     ui.history.replaceChildren();
-    audio.node.port.postMessage({ type: "start", module: audio.module, seed, style, modifiers: chip ? 1 : 0, bpm: 0 });
+    audio.node.port.postMessage({ type: "start", module: audio.module, seed, style, variant: driving() ? 1 : 0, modifiers: chip ? 1 : 0, bpm: 0 });
     audio.gain.gain.cancelScheduledValues(audio.ctx.currentTime);
     audio.gain.gain.setTargetAtTime(volumeGain(), audio.ctx.currentTime, 0.05);
   }
@@ -363,6 +376,13 @@ kbd { font: 500 11px var(--font-mono); border: 1px solid var(--track); border-ra
     restartPiece();
   }
 
+  function toggleDrive() {
+    if (!STYLES[style].drive) return;
+    drive = !drive;
+    showStyle();
+    restartPiece();
+  }
+
   // Same piece, same tune: only the instruments change.
   function toggleChip() {
     chip = !chip;
@@ -371,6 +391,7 @@ kbd { font: 500 11px var(--font-mono); border: 1px solid var(--track); border-ra
   }
 
   ui.play.addEventListener("click", togglePlay);
+  ui.drive.addEventListener("click", toggleDrive);
   ui.chip.addEventListener("click", toggleChip);
   ui.next.addEventListener("click", newPiece);
   ui.styles.forEach((button, index) => button.addEventListener("click", () => chooseStyle(index)));
@@ -383,6 +404,7 @@ kbd { font: 500 11px var(--font-mono); border: 1px solid var(--track); border-ra
     if (event.code === "Space") { event.preventDefault(); togglePlay(); }
     else if (event.key === "n" || event.key === "N") newPiece();
     else if (event.key === "c" || event.key === "C") toggleChip();
+    else if (event.key === "d" || event.key === "D") toggleDrive();
     else if (/^[1-6]$/.test(event.key)) chooseStyle(Number(event.key) - 1);
   });
 
@@ -394,6 +416,8 @@ kbd { font: 500 11px var(--font-mono); border: 1px solid var(--track); border-ra
   const samples = new Float32Array(1024);
   const drops = Array.from({ length: 70 }, () => ({ x: Math.random(), y: Math.random(), speed: 0.35 + Math.random() * 0.4 }));
   let lastFrame = 0;
+  // Wave time, run faster while driving; kept as a sum so a change of speed never makes the waves jump.
+  let waveTime = 0;
 
   function ripple() {
     if (still.matches) return;
@@ -422,7 +446,10 @@ kbd { font: 500 11px var(--font-mono); border: 1px solid var(--track); border-ra
     const css = getComputedStyle(document.documentElement);
     const water = css.getPropertyValue("--water").trim();
     const glow = css.getPropertyValue("--glow").trim();
-    const t = still.matches ? 0 : now / 1000;
+    const elapsed = Math.min(0.1, (now - lastFrame) / 1000);
+    lastFrame = now;
+    waveTime += elapsed * (driving() ? 2.5 : 1);
+    const t = still.matches ? 0 : waveTime;
     const horizon = height * 0.5;
     const lines = 16;
     draw.strokeStyle = water;
@@ -438,17 +465,15 @@ kbd { font: 500 11px var(--font-mono); border: 1px solid var(--track); border-ra
       for (let x = 0; x <= width; x += 8) {
         const wave = Math.sin(x * 0.006 / (0.4 + depth) + t * 0.25 + i * 1.7)
           + 0.5 * Math.sin(x * 0.017 / (0.4 + depth) - t * 0.4 + i);
-        const level = chip ? Math.round((y + wave * amplitude) / 4) * 4 : y + wave * amplitude;
-        if (x === 0) draw.moveTo(x, level);
-        else if (chip) { draw.lineTo(x, last); draw.lineTo(x, level); }
-        else draw.lineTo(x, level);
-        last = level;
+        const surface = chip ? Math.round((y + wave * amplitude) / 4) * 4 : y + wave * amplitude;
+        if (x === 0) draw.moveTo(x, surface);
+        else if (chip) { draw.lineTo(x, last); draw.lineTo(x, surface); }
+        else draw.lineTo(x, surface);
+        last = surface;
       }
       draw.stroke();
     }
 
-    const elapsed = Math.min(0.1, (now - lastFrame) / 1000);
-    lastFrame = now;
     if (STYLES[style].id === "midnight" && !still.matches) {
       draw.strokeStyle = water;
       draw.lineWidth = 1;

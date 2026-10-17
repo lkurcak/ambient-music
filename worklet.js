@@ -10,7 +10,7 @@ class AmbientProcessor extends AudioWorkletProcessor {
       if (data.type === "start") {
         const instance = await WebAssembly.instantiate(data.module, {});
         this.engine = instance.exports;
-        this.engine.init(data.seed, data.style, data.modifiers, data.bpm, 1, sampleRate);
+        this.engine.init(data.seed, data.style, data.variant, data.modifiers, data.bpm, 1, sampleRate);
       }
     };
   }
