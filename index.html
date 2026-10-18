@@ -214,9 +214,9 @@ kbd { font: 500 11px var(--font-mono); border: 1px solid var(--track); border-ra
     { id: "void", bpm: 70, tagline: "Sparse chip melodies over drones, through a crushed old converter",
       drive: { bpm: 160, tagline: "Void at full tilt: chip leads racing over club beats and rolling console bass" } },
     { id: "velvet", bpm: 112, tagline: "A piano trio in a candlelit restaurant: walking bass, brushes and the clink of glasses" },
-    { id: "spiral", bpm: 104, tagline: "After Tool: riffs in shifting odd meters, a delayed arpeggio drifting across the bar, toms and slow builds",
-      drive: { bpm: 120, tagline: "After Pneuma: the drums out in front, ghost notes, tom runs and cymbals counting against the bar" },
-      deep: { bpm: 92, tagline: "After Fear Inoculum: drones and tabla for minutes, the bass carrying the tune, and a long climb to heavy" } },
+    { id: "spiral", bpm: 100, tagline: "After Tool: rites of several minutes, each in its own odd meter and tempo, built pass by pass until they break",
+      drive: { bpm: 116, tagline: "After Pneuma: drum rites, riffs against the bar, ghost notes and tom runs" },
+      deep: { bpm: 88, tagline: "After Fear Inoculum: long invocations with drone and tabla, and slow builds to heavy" } },
   ];
   const $ = (id) => document.getElementById(id);
   const ui = {
@@ -227,7 +227,7 @@ kbd { font: 500 11px var(--font-mono); border: 1px solid var(--track); border-ra
   };
 
   // Bump when ambient.wasm or worklet.js change, so browsers never pair a cached old one with a new one.
-  const VERSION = "10";
+  const VERSION = "11";
   const audio = { ctx: null, node: null, gain: null, analyser: null, module: null };
   // Links look like #lofi-4242, #scarlet:drive-4242 or #spiral:deep-4242 for a variant, or #void+chip-4242
   // on console voices; a bare #4242 means Meadow.
