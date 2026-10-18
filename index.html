@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="claude:viewport-fit-sides" content="cover">
 <title>Still Water</title>
-<meta name="description" content="Endless generative music for long, quiet thinking: eight styles of ambient, lo-fi, jazz, prog and game-inspired music, made fresh in your browser, with a drive mode and an 8-bit switch.">
+<meta name="description" content="Endless generative music for long, quiet thinking: eight styles of ambient, lo-fi, jazz, prog and game-inspired music, made fresh in your browser, with drive and deep versions and an 8-bit switch.">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -170,6 +170,7 @@ kbd { font: 500 11px var(--font-mono); border: 1px solid var(--track); border-ra
         <button type="button" data-style="spiral">Spiral</button>
       </div>
       <button type="button" class="modifier" id="drive" aria-pressed="false">Drive</button>
+      <button type="button" class="modifier" id="deep" aria-pressed="false">Deep</button>
       <button type="button" class="modifier" id="chip" aria-pressed="false" title="Play it on console voices: same tune, 8-bit sound">8-bit</button>
     </div>
   </header>
@@ -196,7 +197,7 @@ kbd { font: 500 11px var(--font-mono); border: 1px solid var(--track); border-ra
       </label>
     </div>
     <p class="status" id="status" role="status"></p>
-    <span class="hint"><kbd>Space</kbd> play or pause · <kbd>N</kbd> new piece · <kbd>1</kbd>–<kbd>8</kbd> style · <kbd>D</kbd> drive · <kbd>C</kbd> 8-bit · same piece number, same music</span>
+    <span class="hint"><kbd>Space</kbd> play or pause · <kbd>N</kbd> new piece · <kbd>1</kbd>–<kbd>8</kbd> style · <kbd>D</kbd> drive · <kbd>E</kbd> deep · <kbd>C</kbd> 8-bit · same piece number, same music</span>
   </div>
 </main>
 
@@ -213,33 +214,41 @@ kbd { font: 500 11px var(--font-mono); border: 1px solid var(--track); border-ra
     { id: "void", bpm: 70, tagline: "Sparse chip melodies over drones, through a crushed old converter",
       drive: { bpm: 160, tagline: "Void at full tilt: chip leads racing over club beats and rolling console bass" } },
     { id: "velvet", bpm: 112, tagline: "A piano trio in a candlelit restaurant: walking bass, brushes and the clink of glasses" },
-    { id: "spiral", bpm: 104, tagline: "After Tool: riffs in shifting odd meters, a delayed arpeggio drifting across the bar, toms and slow builds" },
+    { id: "spiral", bpm: 104, tagline: "After Tool: riffs in shifting odd meters, a delayed arpeggio drifting across the bar, toms and slow builds",
+      drive: { bpm: 120, tagline: "After Pneuma: the drums out in front, ghost notes, tom runs and cymbals counting against the bar" },
+      deep: { bpm: 92, tagline: "After Fear Inoculum: drones and tabla for minutes, the bass carrying the tune, and a long climb to heavy" } },
   ];
   const $ = (id) => document.getElementById(id);
   const ui = {
     chord: $("chord"), key: $("key"), section: $("section"), voices: $("voices"), clock: $("clock"),
     seed: $("seed"), history: $("history"), play: $("play"), next: $("next"),
     volume: $("volume"), status: $("status"), tagline: $("tagline"), bpm: $("bpm"),
-    styles: [...document.querySelectorAll("#styles button")], drive: $("drive"), chip: $("chip"),
+    styles: [...document.querySelectorAll("#styles button")], drive: $("drive"), deep: $("deep"), chip: $("chip"),
   };
 
   // Bump when ambient.wasm or worklet.js change, so browsers never pair a cached old one with a new one.
-  const VERSION = "8";
+  const VERSION = "9";
   const audio = { ctx: null, node: null, gain: null, analyser: null, module: null };
-  // Links look like #lofi-4242, #scarlet:drive-4242 for a variant, or #void+chip-4242 on console voices;
-  // a bare #4242 means Meadow.
-  const link = location.hash.match(/^#(?:([a-z]+)(:drive)?(\+chip)?-)?(\d{1,9})$/) || [];
+  // Links look like #lofi-4242, #scarlet:drive-4242 or #spiral:deep-4242 for a variant, or #void+chip-4242
+  // on console voices; a bare #4242 means Meadow.
+  const link = location.hash.match(/^#(?:([a-z]+)(?::(drive|deep))?(\+chip)?-)?(\d{1,9})$/) || [];
   let seed = Number(link[4]) || randomSeed();
   let style = Math.max(0, STYLES.findIndex((entry) => entry.id === link[1]));
-  // Drive is a wish that holds across styles, heard only where a style has a drive version.
-  let drive = Boolean(link[2]);
+  // Same order as Variant::ALL in the engine.
+  const VARIANTS = ["calm", "drive", "deep"];
+  // A variant is a wish that holds across styles, heard only where a style has that version.
+  let wish = link[2] || "calm";
   let chip = Boolean(link[3]);
   if (!link[4]) {
     try { style = Math.max(0, STYLES.findIndex((entry) => entry.id === localStorage.getItem("still-water-style"))); } catch {}
-    try { drive = localStorage.getItem("still-water-drive") === "1"; } catch {}
+    try {
+      const saved = localStorage.getItem("still-water-variant");
+      wish = VARIANTS.includes(saved) ? saved : localStorage.getItem("still-water-drive") === "1" ? "drive" : "calm";
+    } catch {}
     try { chip = localStorage.getItem("still-water-chip") === "1"; } catch {}
   }
-  const driving = () => drive && Boolean(STYLES[style].drive);
+  const variant = () => (STYLES[style][wish] ? wish : "calm");
+  const driving = () => variant() === "drive";
   let playing = false;
   let level = 0;
   const recent = [];
@@ -248,22 +257,26 @@ kbd { font: 500 11px var(--font-mono); border: 1px solid var(--track); border-ra
 
   function showSeed() {
     ui.seed.textContent = seed;
-    try { history.replaceState(null, "", `#${STYLES[style].id}${driving() ? ":drive" : ""}${chip ? "+chip" : ""}-${seed}`); } catch {}
+    const suffix = variant() === "calm" ? "" : `:${variant()}`;
+    try { history.replaceState(null, "", `#${STYLES[style].id}${suffix}${chip ? "+chip" : ""}-${seed}`); } catch {}
   }
 
   function showStyle() {
     const entry = STYLES[style];
     document.documentElement.dataset.style = entry.id;
-    const sound = driving() ? entry.drive : entry;
+    const sound = variant() === "calm" ? entry : entry[variant()];
     ui.tagline.textContent = sound.tagline;
     ui.bpm.textContent = sound.bpm;
     ui.drive.disabled = !entry.drive;
-    ui.drive.setAttribute("aria-pressed", String(driving()));
-    ui.drive.title = entry.drive ? "Up-tempo: drums, running melodies, the hook again and again" : "Only Scarlet and Void have a drive version so far";
+    ui.drive.setAttribute("aria-pressed", String(variant() === "drive"));
+    ui.drive.title = entry.drive ? "Up-tempo: drums out in front, never quiet for long" : "Only Scarlet, Void and Spiral have a drive version so far";
+    ui.deep.disabled = !entry.deep;
+    ui.deep.setAttribute("aria-pressed", String(variant() === "deep"));
+    ui.deep.title = entry.deep ? "Slower and longer: builds that take many minutes" : "Only Spiral has a deep version so far";
     for (const button of ui.styles) button.setAttribute("aria-pressed", String(button.dataset.style === entry.id));
     ui.chip.setAttribute("aria-pressed", String(chip));
     try { localStorage.setItem("still-water-style", entry.id); } catch {}
-    try { localStorage.setItem("still-water-drive", drive ? "1" : "0"); } catch {}
+    try { localStorage.setItem("still-water-variant", wish); } catch {}
     try { localStorage.setItem("still-water-chip", chip ? "1" : "0"); } catch {}
     showSeed();
   }
@@ -299,7 +312,7 @@ kbd { font: 500 11px var(--font-mono); border: 1px solid var(--track); border-ra
   function startPiece() {
     recent.length = 0;
     ui.history.replaceChildren();
-    audio.node.port.postMessage({ type: "start", module: audio.module, seed, style, variant: driving() ? 1 : 0, modifiers: chip ? 1 : 0, bpm: 0 });
+    audio.node.port.postMessage({ type: "start", module: audio.module, seed, style, variant: VARIANTS.indexOf(variant()), modifiers: chip ? 1 : 0, bpm: 0 });
     audio.gain.gain.cancelScheduledValues(audio.ctx.currentTime);
     audio.gain.gain.setTargetAtTime(volumeGain(), audio.ctx.currentTime, 0.05);
   }
@@ -387,9 +400,10 @@ kbd { font: 500 11px var(--font-mono); border: 1px solid var(--track); border-ra
     restartPiece();
   }
 
-  function toggleDrive() {
-    if (!STYLES[style].drive) return;
-    drive = !drive;
+  // Pressing the variant playing goes back to calm; pressing the other switches to it.
+  function toggleVariant(name) {
+    if (!STYLES[style][name]) return;
+    wish = variant() === name ? "calm" : name;
     showStyle();
     restartPiece();
   }
@@ -402,7 +416,8 @@ kbd { font: 500 11px var(--font-mono); border: 1px solid var(--track); border-ra
   }
 
   ui.play.addEventListener("click", togglePlay);
-  ui.drive.addEventListener("click", toggleDrive);
+  ui.drive.addEventListener("click", () => toggleVariant("drive"));
+  ui.deep.addEventListener("click", () => toggleVariant("deep"));
   ui.chip.addEventListener("click", toggleChip);
   ui.next.addEventListener("click", newPiece);
   ui.styles.forEach((button, index) => button.addEventListener("click", () => chooseStyle(index)));
@@ -415,7 +430,8 @@ kbd { font: 500 11px var(--font-mono); border: 1px solid var(--track); border-ra
     if (event.code === "Space") { event.preventDefault(); togglePlay(); }
     else if (event.key === "n" || event.key === "N") newPiece();
     else if (event.key === "c" || event.key === "C") toggleChip();
-    else if (event.key === "d" || event.key === "D") toggleDrive();
+    else if (event.key === "d" || event.key === "D") toggleVariant("drive");
+    else if (event.key === "e" || event.key === "E") toggleVariant("deep");
     else if (/^[1-8]$/.test(event.key)) chooseStyle(Number(event.key) - 1);
   });
 
@@ -459,7 +475,7 @@ kbd { font: 500 11px var(--font-mono); border: 1px solid var(--track); border-ra
     const glow = css.getPropertyValue("--glow").trim();
     const elapsed = Math.min(0.1, (now - lastFrame) / 1000);
     lastFrame = now;
-    waveTime += elapsed * (driving() ? 2.5 : 1);
+    waveTime += elapsed * (driving() ? 2.5 : variant() === "deep" ? 0.6 : 1);
     const t = still.matches ? 0 : waveTime;
     const horizon = height * 0.5;
     const lines = 16;
