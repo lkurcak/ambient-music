@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="claude:viewport-fit-sides" content="cover">
 <title>Still Water</title>
-<meta name="description" content="Endless generative music for long, quiet thinking: ten styles of ambient, lo-fi, jazz, prog, nu metal, phonk and game-inspired music, made fresh in your browser, with drive and deep versions and an 8-bit switch.">
+<meta name="description" content="Endless generative music for long, quiet thinking: ten styles of ambient, lo-fi, jazz, prog, nu metal, phonk and game-inspired music, made fresh in your browser, with drive and deep versions, a complex switch and an 8-bit switch.">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -179,6 +179,7 @@ kbd { font: 500 11px var(--font-mono); border: 1px solid var(--track); border-ra
       </div>
       <button type="button" class="modifier" id="drive" aria-pressed="false">Drive</button>
       <button type="button" class="modifier" id="deep" aria-pressed="false">Deep</button>
+      <button type="button" class="modifier" id="complex" aria-pressed="false" title="More going on, each style its own way: counterpoint and canons, passing chords, ornaments, cross-rhythms, odd meters">Complex</button>
       <button type="button" class="modifier" id="chip" aria-pressed="false" title="Play it on console voices: same tune, 8-bit sound">8-bit</button>
     </div>
   </header>
@@ -205,7 +206,7 @@ kbd { font: 500 11px var(--font-mono); border: 1px solid var(--track); border-ra
       </label>
     </div>
     <p class="status" id="status" role="status"></p>
-    <span class="hint"><kbd>Space</kbd> play or pause · <kbd>N</kbd> new piece · <kbd>1</kbd>–<kbd>0</kbd> style · <kbd>D</kbd> drive · <kbd>E</kbd> deep · <kbd>C</kbd> 8-bit · same piece number, same music</span>
+    <span class="hint"><kbd>Space</kbd> play or pause · <kbd>N</kbd> new piece · <kbd>1</kbd>–<kbd>0</kbd> style · <kbd>D</kbd> drive · <kbd>E</kbd> deep · <kbd>X</kbd> complex · <kbd>C</kbd> 8-bit · same piece number, same music</span>
   </div>
 </main>
 
@@ -213,49 +214,52 @@ kbd { font: 500 11px var(--font-mono); border: 1px solid var(--track); border-ra
 (() => {
   // Same order as Style::ALL in the engine.
   const STYLES = [
-    { id: "meadow", bpm: 66, tagline: "Lush major chords, a sparse piano and celesta, wide open air" },
-    { id: "lofi", bpm: 78, tagline: "Dusty Rhodes loops, soft swung drums and vinyl crackle" },
-    { id: "midnight", bpm: 56, tagline: "Minor-key piano over deep pads, with rain on the window" },
-    { id: "lab", bpm: 96, tagline: "Pulsing synth sequences in an empty test chamber" },
-    { id: "scarlet", bpm: 84, tagline: "Touhou at half speed: harmonic-minor piano and long themes that keep coming back",
+    { id: "meadow", bpm: 66, tagline: "Lush major chords, a sparse piano and celesta, wide open air", complex: "Meadow, complex: the tune answered in canon or by a flute's descant, arpeggios in threes and fives against the beat, suspensions and passing chords" },
+    { id: "lofi", bpm: 78, tagline: "Dusty Rhodes loops, soft swung drums and vinyl crackle", complex: "Lo-fi, complex: ii–Vs and tritone substitutes, the comping pushed ahead of the bar, a flute against the keys, and drums laid back and ghosting" },
+    { id: "midnight", bpm: 56, tagline: "Minor-key piano over deep pads, with rain on the window", complex: "Midnight, complex: a nocturne, the left hand rolling in triplets, the tune breaking into runs, turns and trills, inner voices creeping down by half steps" },
+    { id: "lab", bpm: 96, tagline: "Pulsing synth sequences in an empty test chamber", complex: "Lab, complex: two sequences of different lengths drifting in and out of phase, drums spread by numbers, the tune echoing itself in canon" },
+    { id: "scarlet", bpm: 84, tagline: "Touhou at half speed: harmonic-minor piano and long themes that keep coming back", complex: "Scarlet, complex: a horn or flute against the piano, mordents and runs, secondary dominants, and the theme coming back a key higher",
       drive: { bpm: 150, tagline: "Touhou at full tilt: a chord a bar, drums, galloping bass and the hook again and again" } },
-    { id: "void", bpm: 70, tagline: "Sparse chip melodies over drones, through a crushed old converter",
+    { id: "void", bpm: 70, tagline: "Sparse chip melodies over drones, through a crushed old converter", complex: "Void, complex: chip voices answering each other in canon, arpeggios in fives and sevens, trills, and the Phrygian half step home",
       drive: { bpm: 160, tagline: "Void at full tilt: chip leads racing over club beats and rolling console bass" } },
-    { id: "velvet", bpm: 112, tagline: "A piano trio in a candlelit restaurant: walking bass, brushes and the clink of glasses" },
-    { id: "spiral", bpm: 100, tagline: "After Tool: rites of several minutes, each in its own odd meter and tempo, built pass by pass until they break",
+    { id: "velvet", bpm: 112, tagline: "A piano trio in a candlelit restaurant: walking bass, brushes and the clink of glasses", complex: "Velvet, complex: bebop, with ii–Vs and tritone substitutes everywhere, lines with enclosures, the comping pushing ahead, and sets in three and in five" },
+    { id: "spiral", bpm: 100, tagline: "After Tool: rites of several minutes, each in its own odd meter and tempo, built pass by pass until they break", complex: "Spiral, complex: Fibonacci and Lateralus meters, tihais the band lands together, metric modulations, and the hands going round in a cycle of their own",
       drive: { bpm: 116, tagline: "After Pneuma: drum rites, riffs against the bar, ghost notes and tom runs" },
       deep: { bpm: 88, tagline: "After Fear Inoculum: long invocations with drone and tabla, and slow builds to heavy" } },
-    { id: "bruise", bpm: 100, tagline: "After Korn's first album: creepy verses over a clanking bass and hip-hop drums, then the down-tuned riff crashes in" },
-    { id: "murk", bpm: 140, tagline: "After Memphis phonk and dark trap: a mixtape of beats, each with its own producer and tempo, a deep sliding 808, hat rolls, vocal chops, tape stops and beat switches" },
+    { id: "bruise", bpm: 100, tagline: "After Korn's first album: creepy verses over a clanking bass and hip-hop drums, then the down-tuned riff crashes in", complex: "Bruise, complex: the chorus riff going round in thirteens, nineteens and twenty-threes against the bar, the kick on every chug, Meshuggah-style" },
+    { id: "murk", bpm: 140, tagline: "After Memphis phonk and dark trap: a mixtape of beats, each with its own producer and tempo, a deep sliding 808, hat rolls, vocal chops, tape stops and beat switches", complex: "Murk, complex: the producer flips the melody, cowbells in threes and fives against the beat, triplet flows, more rolls and more beat switches" },
   ];
   const $ = (id) => document.getElementById(id);
   const ui = {
     chord: $("chord"), key: $("key"), section: $("section"), voices: $("voices"), clock: $("clock"),
     seed: $("seed"), history: $("history"), play: $("play"), next: $("next"),
     volume: $("volume"), status: $("status"), tagline: $("tagline"), bpm: $("bpm"),
-    styles: [...document.querySelectorAll("#styles button")], drive: $("drive"), deep: $("deep"), chip: $("chip"),
+    styles: [...document.querySelectorAll("#styles button")], drive: $("drive"), deep: $("deep"), complex: $("complex"), chip: $("chip"),
   };
 
   // Bump when ambient.wasm or worklet.js change, so browsers never pair a cached old one with a new one.
-  const VERSION = "13";
+  const VERSION = "14";
   const audio = { ctx: null, node: null, gain: null, analyser: null, module: null };
-  // Links look like #lofi-4242, #scarlet:drive-4242 or #spiral:deep-4242 for a variant, or #void+chip-4242
-  // on console voices; a bare #4242 means Meadow.
-  const link = location.hash.match(/^#(?:([a-z]+)(?::(drive|deep))?(\+chip)?-)?(\d{1,9})$/) || [];
-  let seed = Number(link[4]) || randomSeed();
+  // Links look like #lofi-4242, #scarlet:drive-4242 or #spiral:deep-4242 for a variant, #velvet+complex-4242
+  // with more going on, or #void+chip-4242 on console voices (#void:drive+complex+chip-4242 for all three);
+  // a bare #4242 means Meadow.
+  const link = location.hash.match(/^#(?:([a-z]+)(?::(drive|deep))?(\+complex)?(\+chip)?-)?(\d{1,9})$/) || [];
+  let seed = Number(link[5]) || randomSeed();
   let style = Math.max(0, STYLES.findIndex((entry) => entry.id === link[1]));
   // Same order as Variant::ALL in the engine.
   const VARIANTS = ["calm", "drive", "deep"];
   // A variant is a wish that holds across styles, heard only where a style has that version.
   let wish = link[2] || "calm";
-  let chip = Boolean(link[3]);
-  if (!link[4]) {
+  let complex = Boolean(link[3]);
+  let chip = Boolean(link[4]);
+  if (!link[5]) {
     try { style = Math.max(0, STYLES.findIndex((entry) => entry.id === localStorage.getItem("still-water-style"))); } catch {}
     try {
       const saved = localStorage.getItem("still-water-variant");
       wish = VARIANTS.includes(saved) ? saved : localStorage.getItem("still-water-drive") === "1" ? "drive" : "calm";
     } catch {}
     try { chip = localStorage.getItem("still-water-chip") === "1"; } catch {}
+    try { complex = localStorage.getItem("still-water-complex") === "1"; } catch {}
   }
   const variant = () => (STYLES[style][wish] ? wish : "calm");
   const driving = () => variant() === "drive";
@@ -268,14 +272,14 @@ kbd { font: 500 11px var(--font-mono); border: 1px solid var(--track); border-ra
   function showSeed() {
     ui.seed.textContent = seed;
     const suffix = variant() === "calm" ? "" : `:${variant()}`;
-    try { history.replaceState(null, "", `#${STYLES[style].id}${suffix}${chip ? "+chip" : ""}-${seed}`); } catch {}
+    try { history.replaceState(null, "", `#${STYLES[style].id}${suffix}${complex ? "+complex" : ""}${chip ? "+chip" : ""}-${seed}`); } catch {}
   }
 
   function showStyle() {
     const entry = STYLES[style];
     document.documentElement.dataset.style = entry.id;
     const sound = variant() === "calm" ? entry : entry[variant()];
-    ui.tagline.textContent = sound.tagline;
+    ui.tagline.textContent = complex ? entry.complex : sound.tagline;
     ui.bpm.textContent = sound.bpm;
     ui.drive.disabled = !entry.drive;
     ui.drive.setAttribute("aria-pressed", String(variant() === "drive"));
@@ -285,9 +289,11 @@ kbd { font: 500 11px var(--font-mono); border: 1px solid var(--track); border-ra
     ui.deep.title = entry.deep ? "Slower and longer: builds that take many minutes" : "Only Spiral has a deep version so far";
     for (const button of ui.styles) button.setAttribute("aria-pressed", String(button.dataset.style === entry.id));
     ui.chip.setAttribute("aria-pressed", String(chip));
+    ui.complex.setAttribute("aria-pressed", String(complex));
     try { localStorage.setItem("still-water-style", entry.id); } catch {}
     try { localStorage.setItem("still-water-variant", wish); } catch {}
     try { localStorage.setItem("still-water-chip", chip ? "1" : "0"); } catch {}
+    try { localStorage.setItem("still-water-complex", complex ? "1" : "0"); } catch {}
     showSeed();
   }
   showStyle();
@@ -324,7 +330,7 @@ kbd { font: 500 11px var(--font-mono); border: 1px solid var(--track); border-ra
   function startPiece() {
     recent.length = 0;
     ui.history.replaceChildren();
-    audio.node.port.postMessage({ type: "start", module: audio.module, seed, style, variant: VARIANTS.indexOf(variant()), modifiers: chip ? 1 : 0, bpm: 0 });
+    audio.node.port.postMessage({ type: "start", module: audio.module, seed, style, variant: VARIANTS.indexOf(variant()), modifiers: (chip ? 1 : 0) | (complex ? 2 : 0), bpm: 0 });
     audio.gain.gain.cancelScheduledValues(audio.ctx.currentTime);
     audio.gain.gain.setTargetAtTime(volumeGain(), audio.ctx.currentTime, 0.05);
   }
@@ -347,7 +353,7 @@ kbd { font: 500 11px var(--font-mono); border: 1px solid var(--track); border-ra
         if (tempo) ui.bpm.textContent = tempo[1];
         if (key) ui.key.textContent = key[1];
         else if (part.startsWith("with ")) ui.voices.textContent = part.slice(5);
-        else if (/^theme |alone$|^a breath$|^the tag|^tape stop$|^rewind$/.test(part)) moment = part;
+        else if (/^theme |alone$|^a breath$|^the tag|^tape stop$|^rewind$|^canon |^counterpoint |^phasing|^a tihai$|^metric modulation|^the hands in |^the flip$/.test(part)) moment = part;
         else {
           ui.section.textContent = part;
           if (/: beat switch$|: chopped and screwed$/.test(part)) moment = part;
@@ -426,6 +432,13 @@ kbd { font: 500 11px var(--font-mono); border: 1px solid var(--track); border-ra
     restartPiece();
   }
 
+  // More going on, the same style: canons, passing chords, cross-rhythms and the rest.
+  function toggleComplex() {
+    complex = !complex;
+    showStyle();
+    restartPiece();
+  }
+
   // Same piece, same tune: only the instruments change.
   function toggleChip() {
     chip = !chip;
@@ -436,6 +449,7 @@ kbd { font: 500 11px var(--font-mono); border: 1px solid var(--track); border-ra
   ui.play.addEventListener("click", togglePlay);
   ui.drive.addEventListener("click", () => toggleVariant("drive"));
   ui.deep.addEventListener("click", () => toggleVariant("deep"));
+  ui.complex.addEventListener("click", toggleComplex);
   ui.chip.addEventListener("click", toggleChip);
   ui.next.addEventListener("click", newPiece);
   ui.styles.forEach((button, index) => button.addEventListener("click", () => chooseStyle(index)));
@@ -448,6 +462,7 @@ kbd { font: 500 11px var(--font-mono); border: 1px solid var(--track); border-ra
     if (event.code === "Space") { event.preventDefault(); togglePlay(); }
     else if (event.key === "n" || event.key === "N") newPiece();
     else if (event.key === "c" || event.key === "C") toggleChip();
+    else if (event.key === "x" || event.key === "X") toggleComplex();
     else if (event.key === "d" || event.key === "D") toggleVariant("drive");
     else if (event.key === "e" || event.key === "E") toggleVariant("deep");
     else if (/^[0-9]$/.test(event.key)) chooseStyle((Number(event.key) + 9) % 10);
@@ -496,7 +511,8 @@ kbd { font: 500 11px var(--font-mono); border: 1px solid var(--track); border-ra
     waveTime += elapsed * (driving() ? 2.5 : variant() === "deep" ? 0.6 : 1);
     const t = still.matches ? 0 : waveTime;
     const horizon = height * 0.5;
-    const lines = 16;
+    // Complex water: more lines, and a third, quicker wave crossing the others.
+    const lines = complex ? 22 : 16;
     // On Murk the water glitches now and then, like a worn tape: one line
     // jolts sideways, more often the louder it gets.
     const jolted = STYLES[style].id === "murk" && !still.matches && Math.random() < Math.min(0.2, level * 1.5)
@@ -515,7 +531,8 @@ kbd { font: 500 11px var(--font-mono); border: 1px solid var(--track); border-ra
       const shift = i === jolted ? jolt : 0;
       for (let x = 0; x <= width; x += 8) {
         const wave = Math.sin((x + shift) * 0.006 / (0.4 + depth) + t * 0.25 + i * 1.7)
-          + 0.5 * Math.sin((x + shift) * 0.017 / (0.4 + depth) - t * 0.4 + i);
+          + 0.5 * Math.sin((x + shift) * 0.017 / (0.4 + depth) - t * 0.4 + i)
+          + (complex ? 0.35 * Math.sin((x + shift) * 0.041 / (0.4 + depth) + t * 0.9 + i * 2.3) : 0);
         const surface = chip ? Math.round((y + wave * amplitude) / 4) * 4 : y + wave * amplitude;
         if (x === 0) draw.moveTo(x, surface);
         else if (chip) { draw.lineTo(x, last); draw.lineTo(x, surface); }
