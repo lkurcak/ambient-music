@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="claude:viewport-fit-sides" content="cover">
 <title>Still Water</title>
-<meta name="description" content="Endless generative music for long, quiet thinking: nine styles of ambient, lo-fi, jazz, prog, nu metal and game-inspired music, made fresh in your browser, with drive and deep versions and an 8-bit switch.">
+<meta name="description" content="Endless generative music for long, quiet thinking: ten styles of ambient, lo-fi, jazz, prog, nu metal, phonk and game-inspired music, made fresh in your browser, with drive and deep versions and an 8-bit switch.">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -48,6 +48,7 @@
 :root[data-style="velvet"] { --bg: #efe7dc; --fg: #2b1d14; --muted: #6f5d4e; --accent: #7a3b2e; --on-accent: #faf4ee; --water: #b9a48c; --glow: #c48a2c; --track: #ddd0bf; }
 :root[data-style="spiral"] { --bg: #e9e6ee; --fg: #1e1a2a; --muted: #625b75; --accent: #4b3a8c; --on-accent: #f5f3fa; --water: #a49cc0; --glow: #c0782a; --track: #d3cee0; }
 :root[data-style="bruise"] { --bg: #e7e8de; --fg: #1f2119; --muted: #5f6356; --accent: #5a6816; --on-accent: #f6f7f0; --water: #a5ab8f; --glow: #a8442a; --track: #d1d4c4; }
+:root[data-style="murk"] { --bg: #ebe5ea; --fg: #221a20; --muted: #6b5d66; --accent: #7a1f3d; --on-accent: #fbf3f6; --water: #b39aaa; --glow: #7d45b8; --track: #d9ccd4; }
 @media (prefers-color-scheme: dark) {
   :root[data-style="lofi"]:not([data-theme="light"]) { --bg: #19131e; --fg: #ece2ee; --muted: #a090a6; --accent: #d6afdc; --on-accent: #19131e; --water: #5d4867; --glow: #e89e78; --track: #3a2e40; }
   :root[data-style="midnight"]:not([data-theme="light"]) { --bg: #0a0d19; --fg: #dfe3f4; --muted: #8c93b3; --accent: #a9b5e8; --on-accent: #0a0d19; --water: #37406a; --glow: #cdd6ff; --track: #262c48; }
@@ -57,6 +58,7 @@
   :root[data-style="velvet"]:not([data-theme="light"]) { --bg: #140e0a; --fg: #efe4d6; --muted: #a8957f; --accent: #e0b46a; --on-accent: #140e0a; --water: #5a4232; --glow: #f0b45a; --track: #33261c; }
   :root[data-style="spiral"]:not([data-theme="light"]) { --bg: #0c0a14; --fg: #e6e2f2; --muted: #8f88a8; --accent: #b9a6ff; --on-accent: #0c0a14; --water: #3a3260; --glow: #e8a04a; --track: #241f38; }
   :root[data-style="bruise"]:not([data-theme="light"]) { --bg: #0d0f0a; --fg: #e3e6d8; --muted: #8d927e; --accent: #b9cc4a; --on-accent: #0d0f0a; --water: #3a4030; --glow: #c8553a; --track: #23271d; }
+  :root[data-style="murk"]:not([data-theme="light"]) { --bg: #0b080b; --fg: #ece1e8; --muted: #9a8794; --accent: #e0457b; --on-accent: #0b080b; --water: #3d2436; --glow: #a46bff; --track: #2a1c26; }
 }
 :root[data-theme="dark"][data-style="lofi"] { --bg: #19131e; --fg: #ece2ee; --muted: #a090a6; --accent: #d6afdc; --on-accent: #19131e; --water: #5d4867; --glow: #e89e78; --track: #3a2e40; }
 :root[data-theme="dark"][data-style="midnight"] { --bg: #0a0d19; --fg: #dfe3f4; --muted: #8c93b3; --accent: #a9b5e8; --on-accent: #0a0d19; --water: #37406a; --glow: #cdd6ff; --track: #262c48; }
@@ -66,6 +68,7 @@
 :root[data-theme="dark"][data-style="velvet"] { --bg: #140e0a; --fg: #efe4d6; --muted: #a8957f; --accent: #e0b46a; --on-accent: #140e0a; --water: #5a4232; --glow: #f0b45a; --track: #33261c; }
 :root[data-theme="dark"][data-style="spiral"] { --bg: #0c0a14; --fg: #e6e2f2; --muted: #8f88a8; --accent: #b9a6ff; --on-accent: #0c0a14; --water: #3a3260; --glow: #e8a04a; --track: #241f38; }
 :root[data-theme="dark"][data-style="bruise"] { --bg: #0d0f0a; --fg: #e3e6d8; --muted: #8d927e; --accent: #b9cc4a; --on-accent: #0d0f0a; --water: #3a4030; --glow: #c8553a; --track: #23271d; }
+:root[data-theme="dark"][data-style="murk"] { --bg: #0b080b; --fg: #ece1e8; --muted: #9a8794; --accent: #e0457b; --on-accent: #0b080b; --water: #3d2436; --glow: #a46bff; --track: #2a1c26; }
 
 * { box-sizing: border-box; }
 html, body { height: 100%; }
@@ -172,6 +175,7 @@ kbd { font: 500 11px var(--font-mono); border: 1px solid var(--track); border-ra
         <button type="button" data-style="velvet">Velvet</button>
         <button type="button" data-style="spiral">Spiral</button>
         <button type="button" data-style="bruise">Bruise</button>
+        <button type="button" data-style="murk">Murk</button>
       </div>
       <button type="button" class="modifier" id="drive" aria-pressed="false">Drive</button>
       <button type="button" class="modifier" id="deep" aria-pressed="false">Deep</button>
@@ -201,7 +205,7 @@ kbd { font: 500 11px var(--font-mono); border: 1px solid var(--track); border-ra
       </label>
     </div>
     <p class="status" id="status" role="status"></p>
-    <span class="hint"><kbd>Space</kbd> play or pause · <kbd>N</kbd> new piece · <kbd>1</kbd>–<kbd>9</kbd> style · <kbd>D</kbd> drive · <kbd>E</kbd> deep · <kbd>C</kbd> 8-bit · same piece number, same music</span>
+    <span class="hint"><kbd>Space</kbd> play or pause · <kbd>N</kbd> new piece · <kbd>1</kbd>–<kbd>0</kbd> style · <kbd>D</kbd> drive · <kbd>E</kbd> deep · <kbd>C</kbd> 8-bit · same piece number, same music</span>
   </div>
 </main>
 
@@ -222,6 +226,7 @@ kbd { font: 500 11px var(--font-mono); border: 1px solid var(--track); border-ra
       drive: { bpm: 116, tagline: "After Pneuma: drum rites, riffs against the bar, ghost notes and tom runs" },
       deep: { bpm: 88, tagline: "After Fear Inoculum: long invocations with drone and tabla, and slow builds to heavy" } },
     { id: "bruise", bpm: 100, tagline: "After Korn's first album: creepy verses over a clanking bass and hip-hop drums, then the down-tuned riff crashes in" },
+    { id: "murk", bpm: 140, tagline: "After Memphis phonk and dark trap: a mixtape of beats, each with its own producer and tempo, a deep sliding 808, hat rolls, vocal chops, tape stops and beat switches" },
   ];
   const $ = (id) => document.getElementById(id);
   const ui = {
@@ -232,7 +237,7 @@ kbd { font: 500 11px var(--font-mono); border: 1px solid var(--track); border-ra
   };
 
   // Bump when ambient.wasm or worklet.js change, so browsers never pair a cached old one with a new one.
-  const VERSION = "12";
+  const VERSION = "13";
   const audio = { ctx: null, node: null, gain: null, analyser: null, module: null };
   // Links look like #lofi-4242, #scarlet:drive-4242 or #spiral:deep-4242 for a variant, or #void+chip-4242
   // on console voices; a bare #4242 means Meadow.
@@ -337,10 +342,16 @@ kbd { font: 500 11px var(--font-mono); border: 1px solid var(--track); border-ra
       let moment = "";
       for (const part of parts) {
         const key = part.match(/key of (.+)$/);
+        // Songs and beats that set their own tempo say so.
+        const tempo = part.match(/ at (\d+) bpm$/);
+        if (tempo) ui.bpm.textContent = tempo[1];
         if (key) ui.key.textContent = key[1];
         else if (part.startsWith("with ")) ui.voices.textContent = part.slice(5);
-        else if (/^theme |alone$|^a breath$/.test(part)) moment = part;
-        else ui.section.textContent = part;
+        else if (/^theme |alone$|^a breath$|^the tag|^tape stop$|^rewind$/.test(part)) moment = part;
+        else {
+          ui.section.textContent = part;
+          if (/: beat switch$|: chopped and screwed$/.test(part)) moment = part;
+        }
       }
       showChord(chord, `${minutes}:${seconds}`, moment);
     }
@@ -439,7 +450,7 @@ kbd { font: 500 11px var(--font-mono); border: 1px solid var(--track); border-ra
     else if (event.key === "c" || event.key === "C") toggleChip();
     else if (event.key === "d" || event.key === "D") toggleVariant("drive");
     else if (event.key === "e" || event.key === "E") toggleVariant("deep");
-    else if (/^[1-9]$/.test(event.key)) chooseStyle(Number(event.key) - 1);
+    else if (/^[0-9]$/.test(event.key)) chooseStyle((Number(event.key) + 9) % 10);
   });
 
   // The lake: slow wavy lines that swell with the music, and a ripple on each chord.
@@ -486,6 +497,11 @@ kbd { font: 500 11px var(--font-mono); border: 1px solid var(--track); border-ra
     const t = still.matches ? 0 : waveTime;
     const horizon = height * 0.5;
     const lines = 16;
+    // On Murk the water glitches now and then, like a worn tape: one line
+    // jolts sideways, more often the louder it gets.
+    const jolted = STYLES[style].id === "murk" && !still.matches && Math.random() < Math.min(0.2, level * 1.5)
+      ? Math.floor(Math.random() * lines) : -1;
+    const jolt = (Math.random() - 0.5) * 80;
     draw.strokeStyle = water;
     for (let i = 0; i < lines; i++) {
       const depth = i / (lines - 1);
@@ -496,9 +512,10 @@ kbd { font: 500 11px var(--font-mono); border: 1px solid var(--track); border-ra
       draw.beginPath();
       // On chip the water goes blocky: stairs on a 4px grid instead of curves.
       let last = 0;
+      const shift = i === jolted ? jolt : 0;
       for (let x = 0; x <= width; x += 8) {
-        const wave = Math.sin(x * 0.006 / (0.4 + depth) + t * 0.25 + i * 1.7)
-          + 0.5 * Math.sin(x * 0.017 / (0.4 + depth) - t * 0.4 + i);
+        const wave = Math.sin((x + shift) * 0.006 / (0.4 + depth) + t * 0.25 + i * 1.7)
+          + 0.5 * Math.sin((x + shift) * 0.017 / (0.4 + depth) - t * 0.4 + i);
         const surface = chip ? Math.round((y + wave * amplitude) / 4) * 4 : y + wave * amplitude;
         if (x === 0) draw.moveTo(x, surface);
         else if (chip) { draw.lineTo(x, last); draw.lineTo(x, surface); }
